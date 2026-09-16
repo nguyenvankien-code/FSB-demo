@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard Hiệu suất 5 Phòng ban</title>
+<style>
+  :root{--bg:#f4f6fa;--panel:#fff;--ink:#1c2430;--muted:#5b6675;--line:#e5e8ee;--brand:#2f5bd6;
+    --red:#e23b3b;--amber:#e0a516;--green:#17a06b;--chip:#eef2fb;--shadow:0 1px 3px rgba(20,30,50,.08),0 8px 24px rgba(20,30,50,.06)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0f141b;--panel:#161d27;--ink:#e8edf4;--muted:#9aa7b8;--line:#26303d;--brand:#6f97ff;--chip:#1b2532;
+    --shadow:0 1px 3px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.35)}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;line-height:1.55}
+  .wrap{max-width:980px;margin:0 auto;padding:18px 16px 40px}
+  header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+  h1{font-size:21px;margin:0}
+  .sub{font-size:12.5px;color:var(--muted)}
+  .total{background:linear-gradient(135deg,var(--brand),#1c3aa0);color:#fff;border-radius:16px;padding:18px 22px;
+    display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow);margin-bottom:16px}
+  .total .big{font-size:46px;font-weight:800;line-height:1}
+  .total .lbl{font-size:12px;letter-spacing:.08em;text-transform:uppercase;opacity:.9}
+  .dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow);border-top:4px solid var(--line)}
+  .card.do{border-top-color:var(--red)}.card.vang{border-top-color:var(--amber)}.card.xanh{border-top-color:var(--green)}
+  .card .ten{font-size:13.5px;font-weight:600}
+  .card .val{font-size:34px;font-weight:800;margin:2px 0}
+  .card .ct{font-size:12px;color:var(--muted)}
+  .tag{font-size:11px;padding:2px 9px;border-radius:999px;color:#fff;font-weight:600}
+  .tag.do{background:var(--red)}.tag.vang{background:var(--amber)}.tag.xanh{background:var(--green)}
+  h2{font-size:15px;margin:6px 0 10px}
+  .sug{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:10px;box-shadow:var(--shadow);
+    display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .sug .txt{font-size:13.5px}
+  .sug .src{font-size:11px;color:var(--muted);font-family:monospace;margin-top:2px}
+  .btns{display:flex;gap:8px;flex:none}
+  button{border:none;border-radius:8px;padding:7px 12px;font-size:13px;font-weight:600;cursor:pointer}
+  .ok{background:var(--green);color:#fff}.skip{background:var(--chip);color:var(--muted)}
+  .state{font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;background:var(--chip);color:var(--brand);white-space:nowrap}
+  .empty{color:var(--muted);text-align:center;padding:24px;font-size:14px}
+  .note{font-size:11.5px;color:var(--muted);margin-top:22px;border-top:1px solid var(--line);padding-top:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div><h1>📊 Dashboard Hiệu suất</h1><div class="sub" id="sub"></div></div>
+    <div class="sub">👔 CEO — toàn cảnh</div>
+  </header>
+  <div id="app"></div>
+  <div class="note" id="note"></div>
+</div>
+
+<script src="data.js"></script>
+<script>
+(function(){
+  var D = window.DATA, C = D.config, W = C.trongSo;
+
+  // ---------- Máy chấm điểm (đúng công thức PRD) ----------
+  function scoreSale(){
+    var tong=0, hot=[];
+    D.sale.forEach(function(r){
+      var p=(r.nganSach>=300?25:r.nganSach>=150?18:r.nganSach>=80?10:3)
+           +(r.thamQuyen==="Có"?25:5)
+           +(r.nhuCau==="Cao"?25:r.nhuCau==="TB"?15:5)
+           +(r.thang<=2?25:r.thang<=4?15:5);
+      tong+=p; if(p>=80) hot.push(r.khach);
+    });
+    var diem=Math.round(tong/D.sale.length);
+    var sug=hot.length?[{ma:"A-SALE01",noidung:"🔥 "+hot.length+" lead nóng chờ gọi: "+hot.join(", ")+" (BANT ≥ 80)."}]:[];
+    return {diem:diem, ct:hot.length+" lead nóng / "+D.sale.length, sug:sug};
+  }
+  function scoreMkt(){
+    var dt=0,cp=0,kem=[];
+    D.mkt.forEach(function(r){ dt+=r.doanhThu; cp+=r.chiPhi; if(r.chiPhi>0 && r.doanhThu/r.chiPhi<3) kem.push(r.cd); });
+    var roas=cp>0?dt/cp:0, diem=Math.min(100,Math.round(roas/5*100));
+    var sug=kem.length?[{ma:"A-MKT01",noidung:"🔴 "+kem.join(", ")+" có ROAS < 3. Giảm ngân sách, dồn sang chiến dịch ROAS cao."}]:[];
+    return {diem:diem, ct:"ROAS tổng "+roas.toFixed(1), sug:sug};
+  }
+  function scoreKho(){
+    var an=0, sug=[];
+    D.kho.forEach(function(r){
+      if(r.ton>=r.tonMin) an++;
+      else{ var mua=Math.max(0,r.dinhMuc-r.ton);
+        sug.push({ma:"A-KHO-"+r.ma,noidung:"🔴 "+r.ma+" – "+r.ten+" dưới tồn tối thiểu ("+r.ton+"/"+r.tonMin+"). Mua bù "+mua+" "+r.dvt+" (~"+tien(mua*r.donGia)+")."}); }
+    });
+    return {diem:Math.round(an/D.kho.length*100), ct:an+"/"+D.kho.length+" vật tư an toàn", sug:sug};
+  }
+  function scoreNs(){
+    var tongCong=0, cb=[];
+    D.ns.forEach(function(r){ tongCong+=r.ngayCong; if(r.ngayCong<22||r.tangCa>10) cb.push(r.nv); });
+    var pct=Math.round(tongCong/(26*D.ns.length)*100);
+    var sug=cb.length?[{ma:"A-NS01",noidung:"🟡 Xem lại chuyên cần/tải việc: "+cb.join(", ")+" (công < 22 hoặc tăng ca > 10h)."}]:[];
+    return {diem:pct, ct:"Chuyên cần "+pct+"%", sug:sug};
+  }
+  function scoreTc(){
+    var today=new Date(); today.setHours(0,0,0,0);
+    var N=C.canhBaoNoNgay, tong=0, quaHan=0, qh=[], sap=[];
+    D.tc.forEach(function(r){
+      tong+=r.soTien;
+      if(r.trangThai==="Đã trả") return;
+      var han=parseNgay(r.han), chenh=Math.floor((han-today)/86400000);
+      if(chenh<=0){ quaHan+=r.soTien; qh.push({t:r.soTien,ma:"A-TC-"+r.ncc+"-"+han.getTime(),noidung:"⚠️ Công nợ QUÁ HẠN: "+r.ncc+" "+tien(r.soTien)+" (hạn "+fNgay(han)+"). Ưu tiên thanh toán."}); }
+      else if(chenh<=N){ sap.push({ma:"A-TC-"+r.ncc+"-"+han.getTime(),noidung:"🟡 Sắp đến hạn trong "+N+" ngày: "+r.ncc+" "+tien(r.soTien)+" (hạn "+fNgay(han)+"). Chuẩn bị dòng tiền."}); }
+    });
+    var diem=tong>0?Math.max(0,Math.round(100-quaHan/tong*100)):100;
+    qh.sort(function(a,b){return b.t-a.t;});
+    var sug=qh.map(function(s){return {ma:s.ma,noidung:s.noidung};}).concat(sap);
+    return {diem:diem, ct:"Quá hạn "+tien(quaHan), sug:sug};
+  }
+
+  // ---------- Tổng hợp ----------
+  var ten={TC:"💰 Tài chính",SALE:"🛒 Sale",MKT:"📣 Marketing",KHO:"⚙️ Kho",NS:"👥 Nhân sự"};
+  var raw={TC:scoreTc(),SALE:scoreSale(),MKT:scoreMkt(),KHO:scoreKho(),NS:scoreNs()};
+  var order=["TC","SALE","MKT","KHO","NS"];
+  var tongDiem=0,tongW=0,phongs=[],sug=[];
+  order.forEach(function(k){
+    var w=W[k]||0; tongDiem+=raw[k].diem*w; tongW+=w;
+    phongs.push({key:k,ten:ten[k],diem:raw[k].diem,mau:mau(raw[k].diem),ct:raw[k].ct});
+    raw[k].sug.forEach(function(s){ sug.push({ma:s.ma,phong:k,noidung:s.noidung}); });
+  });
+  var tong=tongW>0?Math.round(tongDiem/tongW):0;
+
+  // ---------- Render ----------
+  document.getElementById("sub").textContent="Kỳ "+D.ky+" · Điểm tổng có trọng số CEO gán";
+  var colTong=mau(tong)==="do"?"#ff6b6b":mau(tong)==="vang"?"#ffd66b":"#7ff0c0";
+  var html='<div class="total"><div><div class="lbl">Điểm hiệu suất tổng</div>'
+    +'<div class="big">'+tong+'<span style="font-size:18px;opacity:.8">/100</span></div></div>'
+    +'<div style="text-align:right"><span class="dot" style="background:'+colTong+'"></span> '
+    +'<span style="font-size:13px">'+nhan(mau(tong))+'</span><br><span class="lbl">TC30·Sale25·MKT20·Kho15·NS10</span></div></div>';
+
+  html+='<div class="cards">';
+  phongs.forEach(function(p){
+    html+='<div class="card '+p.mau+'"><div class="ten">'+p.ten+'</div><div class="val">'+p.diem+'</div>'
+      +'<div><span class="tag '+p.mau+'">'+nhan(p.mau)+'</span></div><div class="ct">'+p.ct+'</div></div>';
+  });
+  html+='</div>';
+
+  var st=loadState();
+  html+='<h2>🔔 Đề xuất hành động ('+sug.length+')</h2>';
+  if(!sug.length) html+='<div class="empty">Không có cảnh báo. 🎉</div>';
+  sug.forEach(function(s){
+    var tt=st[s.ma]||"Mới", done=tt!=="Mới";
+    html+='<div class="sug"><div class="txt">'+s.noidung+'<div class="src">'+s.ma+'</div></div>';
+    if(done) html+='<div class="state">'+(tt==="Đã duyệt"?"✅ ":"⏭️ ")+tt+'</div>';
+    else html+='<div class="btns">'
+      +'<button class="ok" data-ma="'+attr(s.ma)+'" data-hd="duyet">Duyệt</button>'
+      +'<button class="skip" data-ma="'+attr(s.ma)+'" data-hd="boqua">Bỏ qua</button></div>';
+    html+='</div>';
+  });
+  document.getElementById("app").innerHTML=html;
+
+  document.getElementById("note").innerHTML=
+    "Bản tĩnh (Netlify): chấm điểm ngay trong trình duyệt từ <code>data.js</code>. "
+    +"Nút Duyệt/Bỏ qua lưu trên trình duyệt này (localStorage). "
+    +"Cần phân quyền theo vai và lưu chung nhiều người → dùng bản Google Apps Script.";
+
+  // ---------- Sự kiện duyệt ----------
+  document.getElementById("app").addEventListener("click",function(e){
+    var b=e.target.closest("button[data-ma]"); if(!b) return;
+    var ma=b.getAttribute("data-ma"), hd=b.getAttribute("data-hd");
+    var tt=hd==="duyet"?"Đã duyệt":"Đã bỏ qua";
+    var s=loadState(); s[ma]=tt; saveState(s);
+    var box=b.closest(".sug"); box.querySelector(".btns").outerHTML='<div class="state">'+(hd==="duyet"?"✅ ":"⏭️ ")+tt+'</div>';
+  });
+
+  // ---------- Tiện ích ----------
+  function mau(d){ return d<C.nguongDo?"do":(d<C.nguongXanh?"vang":"xanh"); }
+  function nhan(m){ return m==="do"?"Đỏ":m==="vang"?"Vàng":"Xanh"; }
+  function tien(n){ return Number(n).toLocaleString("vi-VN")+"đ"; }
+  function fNgay(d){ return ("0"+d.getDate()).slice(-2)+"/"+("0"+(d.getMonth()+1)).slice(-2); }
+  function parseNgay(s){ var p=String(s).split("-"); return new Date(+p[0],+p[1]-1,+p[2]); }
+  function attr(s){ return String(s).replace(/"/g,"&quot;"); }
+  function loadState(){ try{ return JSON.parse(localStorage.getItem("dexuat_"+D.ky)||"{}"); }catch(e){ return {}; } }
+  function saveState(s){ try{ localStorage.setItem("dexuat_"+D.ky, JSON.stringify(s)); }catch(e){} }
+})();
+</script>
+</body>
+</html>
